@@ -104,13 +104,16 @@ def _ydl_opts(out_template: str, platform: str) -> dict:
         opts["cookiefile"] = COOKIES_FILE
 
     if platform == "youtube":
-        # Multi-client strategy bypasses "Sign in to confirm you're not a bot".
-        # tv_embedded + ios + web_safari work without authentication in most cases.
+        # Use bgutil PoToken provider (self-hosted) to bypass YouTube bot-check.
+        # Plugin auto-discovers the provider at POT_PROVIDER_URL if set.
+        pot_url = os.environ.get("POT_PROVIDER_URL", "http://bgutil:4416")
         opts["extractor_args"] = {
             "youtube": {
-                "player_client": ["tv_embedded", "ios", "web_safari", "mweb"],
-                "player_skip": ["configs"],
-            }
+                "player_client": ["default", "tv", "ios", "web_safari"],
+            },
+            "youtubepot-bgutilhttp": {
+                "base_url": [pot_url],
+            },
         }
         opts["format"] = (
             f"best[ext=mp4][height<=720][filesize<{MAX_FILE_SIZE_MB}M]/"
@@ -136,11 +139,14 @@ def _blocking_probe(url: str) -> Optional[dict]:
     if os.path.exists(COOKIES_FILE):
         probe_opts["cookiefile"] = COOKIES_FILE
     if platform == "youtube":
+        pot_url = os.environ.get("POT_PROVIDER_URL", "http://bgutil:4416")
         probe_opts["extractor_args"] = {
             "youtube": {
-                "player_client": ["tv_embedded", "ios", "web_safari", "mweb"],
-                "player_skip": ["configs"],
-            }
+                "player_client": ["default", "tv", "ios", "web_safari"],
+            },
+            "youtubepot-bgutilhttp": {
+                "base_url": [pot_url],
+            },
         }
     try:
         with YoutubeDL(probe_opts) as ydl:

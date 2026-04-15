@@ -12,6 +12,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      bgutil:
+        condition: service_started
 
   db:
     image: postgres:15-alpine
@@ -28,6 +30,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  bgutil:
+    image: brainicism/bgutil-ytdlp-pot-provider:latest
+    restart: always
+    init: true
 
   redis:
     image: redis:7-alpine
