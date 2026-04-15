@@ -5,6 +5,7 @@ services:
     env_file: .env
     volumes:
       - ./downloads:/app/downloads
+      - ./cookies:/app/cookies
       - bot_api_data:/var/lib/telegram-bot-api
     depends_on:
       db:

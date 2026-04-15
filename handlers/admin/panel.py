@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -10,6 +11,9 @@ from states import AdminStates
 from keyboards.reply import admin_menu, main_menu, cancel_keyboard
 from keyboards.inline import channel_delete_keyboard
 from data.config import ADMINS
+
+COOKIES_PATH = "/app/cookies/cookies.txt"
+os.makedirs(os.path.dirname(COOKIES_PATH), exist_ok=True)
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -331,3 +335,52 @@ async def save_help_text(message: types.Message, state: FSMContext):
     await db.set_setting('help_text', message.text)
     await state.clear()
     await message.answer("✅ Help matni yangilandi!", reply_markup=admin_menu())
+
+
+# ─── YOUTUBE COOKIES ─────────────────────────────────────────
+
+@router.message(F.text == "🍪 YouTube cookies", admin_filter)
+async def ask_cookies(message: types.Message, state: FSMContext):
+    exists = os.path.exists(COOKIES_PATH)
+    size = os.path.getsize(COOKIES_PATH) if exists else 0
+    status = f"✅ Mavjud ({size} bayt)" if exists and size > 0 else "❌ Yo'q"
+    await message.answer(
+        f"🍪 <b>YouTube cookies</b>\n\n"
+        f"Holat: {status}\n\n"
+        "YouTube ba'zi videolarni yuklab berish uchun tasdiq talab qiladi. "
+        "Bu muammoni hal qilish uchun brauzeringizdan YouTube cookies'ini eksport qilib yuboring.\n\n"
+        "<b>Qanday olinadi:</b>\n"
+        "1. Chrome/Firefox'ga <b>Get cookies.txt LOCALLY</b> extension o'rnating\n"
+        "2. youtube.com'ga kiring va hisobingizga login qiling\n"
+        "3. Extension orqali <code>cookies.txt</code> faylni eksport qiling\n"
+        "4. Shu faylni menga <b>fayl sifatida</b> yuboring\n\n"
+        "⚠️ Cookies faqat admin uchun saqlanadi, boshqa joyga yuborilmaydi.",
+        reply_markup=cancel_keyboard(),
+    )
+    await state.set_state(AdminStates.upload_cookies)
+
+
+@router.message(AdminStates.upload_cookies, admin_filter, F.document)
+async def save_cookies(message: types.Message, state: FSMContext):
+    doc = message.document
+    if doc.file_size and doc.file_size > 2 * 1024 * 1024:
+        await message.answer("❌ Fayl juda katta (>2MB).")
+        return
+    try:
+        file = await bot.get_file(doc.file_id)
+        await bot.download_file(file.file_path, destination=COOKIES_PATH)
+        size = os.path.getsize(COOKIES_PATH)
+        await state.clear()
+        await message.answer(
+            f"✅ Cookies saqlandi! ({size} bayt)\n\n"
+            "Endi YouTube'dagi hamma video yuklab beriladi.",
+            reply_markup=admin_menu(),
+        )
+    except Exception as e:
+        logger.exception(f"Cookies save failed: {e}")
+        await message.answer(f"❌ Saqlab bo'lmadi: {e}")
+
+
+@router.message(AdminStates.upload_cookies, admin_filter, ~F.text.in_(["❌ Bekor qilish", "🏠 Asosiy menyu"]))
+async def cookies_text_fallback(message: types.Message):
+    await message.answer("❌ Fayl yuboring (cookies.txt). Matn qabul qilinmaydi.")

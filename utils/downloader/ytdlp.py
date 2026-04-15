@@ -72,7 +72,7 @@ def _format_selector() -> str:
     )
 
 
-COOKIES_FILE = os.environ.get("YT_COOKIES_FILE", "/app/cookies.txt")
+COOKIES_FILE = os.environ.get("YT_COOKIES_FILE", "/app/cookies/cookies.txt")
 
 UA_DESKTOP = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "

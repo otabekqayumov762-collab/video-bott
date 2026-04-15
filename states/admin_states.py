@@ -8,3 +8,4 @@ class AdminStates(StatesGroup):
     set_price = State()
     set_start_text = State()
     set_help_text = State()
+    upload_cookies = State()
