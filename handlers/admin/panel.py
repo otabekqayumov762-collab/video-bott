@@ -339,22 +339,27 @@ async def save_help_text(message: types.Message, state: FSMContext):
 
 # ─── YOUTUBE COOKIES ─────────────────────────────────────────
 
-@router.message(F.text == "🍪 YouTube cookies", admin_filter)
+@router.message(F.text == "🍪 Cookies (YT/Insta)", admin_filter)
 async def ask_cookies(message: types.Message, state: FSMContext):
     exists = os.path.exists(COOKIES_PATH)
     size = os.path.getsize(COOKIES_PATH) if exists else 0
     status = f"✅ Mavjud ({size} bayt)" if exists and size > 0 else "❌ Yo'q"
     await message.answer(
-        f"🍪 <b>YouTube cookies</b>\n\n"
+        f"🍪 <b>Cookies (YouTube + Instagram)</b>\n\n"
         f"Holat: {status}\n\n"
-        "YouTube ba'zi videolarni yuklab berish uchun tasdiq talab qiladi. "
-        "Bu muammoni hal qilish uchun brauzeringizdan YouTube cookies'ini eksport qilib yuboring.\n\n"
-        "<b>Qanday olinadi:</b>\n"
-        "1. Chrome/Firefox'ga <b>Get cookies.txt LOCALLY</b> extension o'rnating\n"
-        "2. youtube.com'ga kiring va hisobingizga login qiling\n"
-        "3. Extension orqali <code>cookies.txt</code> faylni eksport qiling\n"
-        "4. Shu faylni menga <b>fayl sifatida</b> yuboring\n\n"
-        "⚠️ Cookies faqat admin uchun saqlanadi, boshqa joyga yuborilmaydi.",
+        "Server IP'si data-center bo'lgani uchun YouTube va Instagram "
+        "<b>login talab qilyapti</b>. Bu muammoni hal qilish uchun "
+        "brauzeringizdan cookies'ni eksport qilib yuboring.\n\n"
+        "<b>Qanday qilinadi (5 daqiqa):</b>\n"
+        "1. Chrome yoki Firefox'ga <b>Get cookies.txt LOCALLY</b> extension o'rnating:\n"
+        "   • Chrome: chromewebstore.google.com'dan qidiring\n"
+        "   • Firefox: addons.mozilla.org'dan qidiring\n\n"
+        "2. Brauzerda <b>youtube.com</b>'ga kiring va login qiling\n"
+        "3. Yangi tabda <b>instagram.com</b>'ga kiring va login qiling\n"
+        "4. Extension ikonkasini bosing → <b>Export All Cookies</b>\n"
+        "5. Yuklangan <code>cookies.txt</code> faylini menga <b>fayl sifatida</b> yuboring\n\n"
+        "⚠️ Cookies faqat shu server'da saqlanadi. "
+        "Maxfiy hisobdan foydalanish tavsiya etilmaydi — <b>zaxira Google/Insta</b> yarating.",
         reply_markup=cancel_keyboard(),
     )
     await state.set_state(AdminStates.upload_cookies)

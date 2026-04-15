@@ -213,15 +213,23 @@ def _blocking_download(url: str, out_template: str) -> DownloadResult:
         msg = str(e)
         logger.exception(f"Download failed for {url}: {msg}")
         low = msg.lower()
+        has_cookies = os.path.exists(COOKIES_FILE)
+        cookies_hint = "" if has_cookies else (
+            "\n\n💡 Admin: cookies yuklansa bu videolar ham ishlaydi. "
+            "<code>/admin</code> → 🍪 Cookies (YT/Insta)"
+        )
         if "sign in to confirm" in low or "not a bot" in low:
             err = (
-                "⚠️ YouTube bu videoni yuklab berish uchun tasdiqlash so'rayapti.\n"
-                "Boshqa YouTube videoni sinab ko'ring yoki biroz kutib turing."
+                "⚠️ YouTube tasdiqlash so'rayapti (server IP'si bloklangan)." + cookies_hint
+            )
+        elif "rate-limit" in low or ("login required" in low and "instagram" in low):
+            err = (
+                "⚠️ Instagram login talab qilyapti (server IP'si bloklangan)." + cookies_hint
             )
         elif "Unsupported URL" in msg:
             err = "Bu havola qo'llab-quvvatlanmaydi."
-        elif "Private" in msg or "login" in low:
-            err = "Video shaxsiy yoki kirish talab qiladi."
+        elif "Private" in msg or ("login" in low and "required" in low):
+            err = "Video shaxsiy yoki kirish talab qiladi." + cookies_hint
         elif "not available" in low or "removed" in low:
             err = "Video mavjud emas yoki o'chirilgan."
         elif "filesize" in low:

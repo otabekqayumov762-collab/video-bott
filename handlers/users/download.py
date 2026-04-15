@@ -20,7 +20,7 @@ RESERVED_TEXTS = {
     "🆘 Yordam", "❌ Bekor qilish", "🏠 Asosiy menyu",
     "📊 Statistika", "📢 Xabar yuborish", "🔗 Obuna sozlamalari",
     "💳 Karta raqami", "💵 Narxni belgilash", "💰 To'lov holati",
-    "📝 Start matni", "❓ Help matni", "🍪 YouTube cookies",
+    "📝 Start matni", "❓ Help matni", "🍪 Cookies (YT/Insta)",
 }
 
 

@@ -28,7 +28,7 @@ def admin_menu() -> ReplyKeyboardMarkup:
             [KeyboardButton(text="🔗 Obuna sozlamalari"), KeyboardButton(text="💳 Karta raqami")],
             [KeyboardButton(text="💵 Narxni belgilash"), KeyboardButton(text="💰 To'lov holati")],
             [KeyboardButton(text="📝 Start matni"), KeyboardButton(text="❓ Help matni")],
-            [KeyboardButton(text="🍪 YouTube cookies")],
+            [KeyboardButton(text="🍪 Cookies (YT/Insta)")],
             [KeyboardButton(text="🏠 Asosiy menyu")],
         ],
         resize_keyboard=True,
