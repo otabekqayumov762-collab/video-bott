@@ -1,13 +1,10 @@
 from environs import Env
 
-# environs kutubxonasidan foydalanish
 env = Env()
 env.read_env()
 
-# .env fayl ichidan quyidagilarni o'qiymiz
-BOT_TOKEN = env.str("BOT_TOKEN")  # Bot Token
-ADMINS = env.list("ADMINS")  # adminlar ro'yxati
-
+BOT_TOKEN = env.str("BOT_TOKEN")
+ADMINS = env.list("ADMINS")
 
 DB_USER = env.str("DB_USER")
 DB_PASS = env.str("DB_PASS")
@@ -15,4 +12,9 @@ DB_NAME = env.str("DB_NAME")
 DB_HOST = env.str("DB_HOST")
 DB_PORT = env.str("DB_PORT")
 
-BACKEND_HOST = env.str("BACKEND_HOST", "http://localhost:8000")
+MAX_FILE_SIZE_MB = env.int("MAX_FILE_SIZE_MB", 50)
+DOWNLOAD_DIR = env.str("DOWNLOAD_DIR", "downloads")
+
+PAYMENT_CARD = env.str("PAYMENT_CARD", "8600 0000 0000 0000")
+PAYMENT_OWNER = env.str("PAYMENT_OWNER", "Palonchiyev Pistonchi")
+DOC_PRICE = env.int("DOC_PRICE", 15000)

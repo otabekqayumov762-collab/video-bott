@@ -1,83 +1,70 @@
-# Aiogram New Template (aiogram 3)
+# 🎬 Video Yukla Bot
 
-### 1. Create virtual environment and install packages
-Windows
-```shell
-python -m venv venv && .\venv\Scripts\activate && pip install -r requirements.txt
+Telegram bot — Instagram, YouTube, TikTok va boshqa platformalardan video yuklab beradi.
+Foydalanuvchi faqat havolani yuboradi, bot avtomatik aniqlaydi va yuklab beradi.
+
+## Stack
+
+- Python 3.11 + aiogram 3
+- PostgreSQL (asyncpg)
+- yt-dlp + ffmpeg
+- Docker + docker-compose
+
+## Foydalanish
+
+```bash
+cp .env.example .env
+# .env faylni tahrirlang (BOT_TOKEN, ADMINS, DB_*)
+
+docker compose up -d --build
 ```
 
-Linux/Mac
-```shell
-python3 -m venv venv && source venv/bin/activate && pip3 install -r requirements.txt
+## Loyiha tuzilishi
+
+```
+videoyukla-bot/
+├── app.py                  # Entry point
+├── loader.py               # Bot, dispatcher, db
+├── data/config.py          # .env o'qish
+├── filters/                # admin / chat type
+├── handlers/
+│   ├── admin/panel.py      # Admin menu (statistika, broadcast, kanal, ...)
+│   ├── users/start.py      # /start, kanal a'zoligi
+│   ├── users/help.py       # /help
+│   └── users/download.py   # Link → video yuklab berish
+├── keyboards/              # Reply va inline
+├── middlewares/throttling.py
+├── states/admin_states.py
+├── utils/
+│   ├── db/postgres.py      # Asyncpg pool, jadvallar
+│   ├── downloader/ytdlp.py # yt-dlp wrapper
+│   ├── notify_admins.py
+│   └── set_bot_commands.py
+├── Dockerfile
+├── docker-compose.yml
+└── requirements.txt
 ```
 
-### 2. Create .env file and copy all variables from .env_example to it and customize your self (if needed)
+## Asosiy oqim
 
-### 3. Run app.py
-Windows
-```shell
-python app.py
-```
-Linux/Mac
-```shell
-python3 app.py
-```
+1. Foydalanuvchi `/start` bosadi
+2. Bot kanal a'zoligini tekshiradi (agar admin kanal qo'shgan bo'lsa)
+3. Foydalanuvchi har qanday video havolani yuboradi
+4. Bot platformani avtomatik aniqlaydi (YouTube/Instagram/TikTok/...) — so'ramaydi
+5. yt-dlp orqali yuklab oladi va Telegramga yuboradi
 
-3. Compile translations in locales dir with this command
-```shell
-pybabel compile -d locales -D messages
-```
+## Admin paneli
 
-# Set up Postgresql on server
+`/admin` orqali kiriladi. Tugmalar:
 
-### 1. Install postgresql (if needed)
-```shell
-sudo apt install -y postgresql postgresql-contrib
-```
+- 📊 Statistika
+- 📢 Xabar yuborish (broadcast)
+- 🔗 Obuna sozlamalari (majburiy kanallar)
+- 💳 Karta raqami
+- 💵 Narxni belgilash
+- 💰 To'lov holati (yoq/o'chir)
+- 📝 Start matni
+- ❓ Help matni
+- 🏠 Asosiy menyu
 
-### 2. Log in to the postgresql shell
-```shell
-sudo -u postres psql
-```
-
-### 3. Create a database (in postgresql shell)
-```shell
-CREATE DATABASE database_name WITH template = template0 ENCODING 'UTF8' LC_CTYPE 'C' LC_COLLATE 'C';
-```
-
-### 4. Create a user (in postgresql shell)
-```shell
-CREATE USER user_name WITH PASSWORD 'password';
-```
-
-### 5. Set encoding (in postgresql shell)
-```shell
-ALTER ROLE user_name SET client_encoding TO 'utf8';
-```
-
-### 6. Restrict transactions from an unexpected db user (in postgresql shell)
-```shell
-ALTER ROLE user_name SET default_transaction_isolation TO 'read committed';
-```
-
-### 7. Set timezone (in postgresql shell)
-```shell
-ALTER ROLE user_name SET timezone TO 'UTC';
-```
-> **_Note:_**  If you use another timezone in your project, replace **'UTC'** with yours.
-
-### 8. Grant the user the right to manage the db (in postgresql shell)
-```shell
-GRANT ALL PRIVILEGES ON DATABASE database_name TO user_name;
-```
-
-### 9. Quit postgresql (in postgresql shell)
-```shell
-\q
-```
-
-## If you have questions for this project, join and ask our community: https://t.me/+Wu3loL2thM8yZDMy
-
-<p align="center">
-<img style="width: 60%;" src="https://i.postimg.cc/nzykWKNd/result.gif">
-</p>
+# video-bott
