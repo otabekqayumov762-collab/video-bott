@@ -12,10 +12,7 @@ from data.config import DOWNLOAD_DIR, MAX_FILE_SIZE_MB
 
 logger = logging.getLogger(__name__)
 
-URL_REGEX = re.compile(
-    r"https?://[^\s]+",
-    re.IGNORECASE,
-)
+URL_REGEX = re.compile(r"https?://[^\s]+", re.IGNORECASE)
 
 PLATFORM_PATTERNS = {
     "youtube": re.compile(r"(youtube\.com|youtu\.be)", re.I),
@@ -37,6 +34,7 @@ class DownloadResult:
     is_audio: bool = False
     error: Optional[str] = None
     platform: Optional[str] = None
+    filesize_mb: float = 0.0
 
 
 def detect_platform(url: str) -> str:
@@ -53,32 +51,72 @@ def is_supported_url(text: str) -> Optional[str]:
     return match.group(0) if match else None
 
 
-def _ydl_opts(out_template: str) -> dict:
-    return {
+def _format_selector() -> str:
+    """
+    Size-aware format picker. Prefers pre-merged MP4 (no re-muxing needed),
+    falls back to best-video + best-audio under size cap.
+    """
+    size_mb = MAX_FILE_SIZE_MB
+    # Tiers tried in order:
+    # 1. Pre-merged MP4 under cap (fastest — no merge/re-encode)
+    # 2. Best MP4 video + best m4a audio under cap
+    # 3. Best any under cap
+    # 4. Best available (last-resort, may exceed cap but at least returns)
+    return (
+        f"best[ext=mp4][filesize<{size_mb}M]/"
+        f"best[ext=mp4][filesize_approx<{size_mb}M]/"
+        f"bestvideo[ext=mp4][filesize<{size_mb}M]+bestaudio[ext=m4a]/"
+        f"bestvideo[filesize<{size_mb}M]+bestaudio/"
+        f"best[filesize<{size_mb}M]/"
+        f"best"
+    )
+
+
+def _ydl_opts(out_template: str, platform: str) -> dict:
+    opts = {
         "outtmpl": out_template,
-        "format": (
-            f"bestvideo[filesize<{MAX_FILE_SIZE_MB}M]+bestaudio/"
-            f"best[filesize<{MAX_FILE_SIZE_MB}M]/"
-            f"best"
-        ),
+        "format": _format_selector(),
         "merge_output_format": "mp4",
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
         "restrictfilenames": True,
-        "concurrent_fragment_downloads": 4,
-        "retries": 3,
-        "fragment_retries": 3,
+        "concurrent_fragment_downloads": 16,
+        "retries": 2,
+        "fragment_retries": 2,
         "socket_timeout": 30,
         "geo_bypass": True,
         "ignoreerrors": False,
+        "http_chunk_size": 10 * 1024 * 1024,
+        "noprogress": True,
     }
+    if platform == "youtube":
+        # Prefer 720p max for reasonable file sizes on long videos
+        opts["format"] = (
+            f"best[ext=mp4][height<=720][filesize<{MAX_FILE_SIZE_MB}M]/"
+            f"best[height<=720][filesize<{MAX_FILE_SIZE_MB}M]/"
+            f"bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/"
+            f"best[ext=mp4][filesize<{MAX_FILE_SIZE_MB}M]/"
+            f"best[filesize<{MAX_FILE_SIZE_MB}M]/"
+            f"best[height<=720]/best"
+        )
+    return opts
+
+
+def _blocking_probe(url: str) -> Optional[dict]:
+    """Extract info without downloading (fast)."""
+    try:
+        with YoutubeDL({"quiet": True, "no_warnings": True, "skip_download": True, "noplaylist": True}) as ydl:
+            return ydl.extract_info(url, download=False)
+    except Exception as e:
+        logger.debug(f"Probe failed: {e}")
+        return None
 
 
 def _blocking_download(url: str, out_template: str) -> DownloadResult:
     platform = detect_platform(url)
     try:
-        with YoutubeDL(_ydl_opts(out_template)) as ydl:
+        with YoutubeDL(_ydl_opts(out_template, platform)) as ydl:
             info = ydl.extract_info(url, download=True)
 
         if info is None:
@@ -111,8 +149,13 @@ def _blocking_download(url: str, out_template: str) -> DownloadResult:
                 pass
             return DownloadResult(
                 ok=False,
-                error=f"Fayl hajmi juda katta ({size_mb:.1f} MB). Maksimal: {MAX_FILE_SIZE_MB} MB.",
+                error=(
+                    f"❌ Fayl hajmi: <b>{size_mb:.1f} MB</b>\n"
+                    f"Telegram limiti: <b>{MAX_FILE_SIZE_MB} MB</b>\n\n"
+                    f"Iltimos, qisqaroq video yuboring yoki admin bilan bog'laning."
+                ),
                 platform=platform,
+                filesize_mb=size_mb,
             )
 
         is_audio = file_path.lower().endswith((".mp3", ".m4a", ".aac", ".ogg", ".wav"))
@@ -126,6 +169,7 @@ def _blocking_download(url: str, out_template: str) -> DownloadResult:
             height=info.get("height"),
             is_audio=is_audio,
             platform=platform,
+            filesize_mb=size_mb,
         )
 
     except Exception as e:
@@ -137,9 +181,15 @@ def _blocking_download(url: str, out_template: str) -> DownloadResult:
             err = "Video shaxsiy yoki kirish talab qiladi."
         elif "not available" in msg.lower() or "removed" in msg.lower():
             err = "Video mavjud emas yoki o'chirilgan."
+        elif "filesize" in msg.lower():
+            err = f"Video {MAX_FILE_SIZE_MB} MB dan katta."
         else:
             err = "Yuklab bo'lmadi. Havolani tekshiring va qaytadan urinib ko'ring."
         return DownloadResult(ok=False, error=err, platform=platform)
+
+
+async def probe_media(url: str) -> Optional[dict]:
+    return await asyncio.to_thread(_blocking_probe, url)
 
 
 async def download_media(url: str) -> DownloadResult:

@@ -4,7 +4,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.middlewares.request_logging import logger
 
-from loader import db
+from loader import db, cache
 
 
 def setup_handlers(dispatcher: Dispatcher) -> None:
@@ -32,6 +32,8 @@ async def on_startup(dispatcher: Dispatcher, bot: Bot) -> None:
     await db.create_tables()
     logger.info("Database connected and tables created")
 
+    await cache.connect()
+
     await bot.delete_webhook(drop_pending_updates=True)
     await setup_aiogram(bot=bot, dispatcher=dispatcher)
     await on_startup_notify(bot=bot)
@@ -41,6 +43,7 @@ async def on_startup(dispatcher: Dispatcher, bot: Bot) -> None:
 
 async def on_shutdown(dispatcher: Dispatcher, bot: Bot):
     logger.info("Stopping bot")
+    await cache.close()
     await bot.session.close()
     await dispatcher.storage.close()
 
