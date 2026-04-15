@@ -72,6 +72,14 @@ def _format_selector() -> str:
     )
 
 
+COOKIES_FILE = os.environ.get("YT_COOKIES_FILE", "/app/cookies.txt")
+
+UA_DESKTOP = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
+
 def _ydl_opts(out_template: str, platform: str) -> dict:
     opts = {
         "outtmpl": out_template,
@@ -82,16 +90,28 @@ def _ydl_opts(out_template: str, platform: str) -> dict:
         "no_warnings": True,
         "restrictfilenames": True,
         "concurrent_fragment_downloads": 16,
-        "retries": 2,
-        "fragment_retries": 2,
+        "retries": 3,
+        "fragment_retries": 3,
         "socket_timeout": 30,
         "geo_bypass": True,
         "ignoreerrors": False,
         "http_chunk_size": 10 * 1024 * 1024,
         "noprogress": True,
+        "user_agent": UA_DESKTOP,
     }
+    # Use cookies if file exists (best bypass for YouTube bot-check)
+    if os.path.exists(COOKIES_FILE):
+        opts["cookiefile"] = COOKIES_FILE
+
     if platform == "youtube":
-        # Prefer 720p max for reasonable file sizes on long videos
+        # Multi-client strategy bypasses "Sign in to confirm you're not a bot".
+        # tv_embedded + ios + web_safari work without authentication in most cases.
+        opts["extractor_args"] = {
+            "youtube": {
+                "player_client": ["tv_embedded", "ios", "web_safari", "mweb"],
+                "player_skip": ["configs"],
+            }
+        }
         opts["format"] = (
             f"best[ext=mp4][height<=720][filesize<{MAX_FILE_SIZE_MB}M]/"
             f"best[height<=720][filesize<{MAX_FILE_SIZE_MB}M]/"
@@ -105,8 +125,25 @@ def _ydl_opts(out_template: str, platform: str) -> dict:
 
 def _blocking_probe(url: str) -> Optional[dict]:
     """Extract info without downloading (fast)."""
+    platform = detect_platform(url)
+    probe_opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "noplaylist": True,
+        "user_agent": UA_DESKTOP,
+    }
+    if os.path.exists(COOKIES_FILE):
+        probe_opts["cookiefile"] = COOKIES_FILE
+    if platform == "youtube":
+        probe_opts["extractor_args"] = {
+            "youtube": {
+                "player_client": ["tv_embedded", "ios", "web_safari", "mweb"],
+                "player_skip": ["configs"],
+            }
+        }
     try:
-        with YoutubeDL({"quiet": True, "no_warnings": True, "skip_download": True, "noplaylist": True}) as ydl:
+        with YoutubeDL(probe_opts) as ydl:
             return ydl.extract_info(url, download=False)
     except Exception as e:
         logger.debug(f"Probe failed: {e}")
@@ -175,13 +212,19 @@ def _blocking_download(url: str, out_template: str) -> DownloadResult:
     except Exception as e:
         msg = str(e)
         logger.exception(f"Download failed for {url}: {msg}")
-        if "Unsupported URL" in msg:
+        low = msg.lower()
+        if "sign in to confirm" in low or "not a bot" in low:
+            err = (
+                "⚠️ YouTube bu videoni yuklab berish uchun tasdiqlash so'rayapti.\n"
+                "Boshqa YouTube videoni sinab ko'ring yoki biroz kutib turing."
+            )
+        elif "Unsupported URL" in msg:
             err = "Bu havola qo'llab-quvvatlanmaydi."
-        elif "Private" in msg or "login" in msg.lower():
+        elif "Private" in msg or "login" in low:
             err = "Video shaxsiy yoki kirish talab qiladi."
-        elif "not available" in msg.lower() or "removed" in msg.lower():
+        elif "not available" in low or "removed" in low:
             err = "Video mavjud emas yoki o'chirilgan."
-        elif "filesize" in msg.lower():
+        elif "filesize" in low:
             err = f"Video {MAX_FILE_SIZE_MB} MB dan katta."
         else:
             err = "Yuklab bo'lmadi. Havolani tekshiring va qaytadan urinib ko'ring."
